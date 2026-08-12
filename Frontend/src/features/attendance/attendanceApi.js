@@ -6,6 +6,7 @@ export const attendanceApi = createApi({
 
   baseQuery: fetchBaseQuery({
     baseUrl: API_URL,
+    credentials: 'include', // Enable credentials (cookies, authorization headers, etc.)
 
     prepareHeaders: (headers) => {
       const token = localStorage.getItem("token");

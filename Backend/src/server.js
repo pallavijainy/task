@@ -10,10 +10,13 @@ const overtimeRoutes = require('./routes/overtimeRoutes');
 const userRoutes = require('./routes/userRoutes');
 const app = express();
 
+// CORS Configuration - Allow your frontend to access the API
 app.use(
- cors({
-    origin: process.env.CLIENT_URL,
+  cors({
+    origin: process.env.CLIENT_URL || 'https://attendance-ten-iota.vercel.app',
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
   })
 );
 app.use(express.json({ limit: '10mb' }));
