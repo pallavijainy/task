@@ -89,17 +89,47 @@ exports.createOvertimeRequest = async (req, res) => {
 
 exports.getMyOvertime = async (req, res) => {
   try {
-    const overtime = await Overtime.find({
-      employee: req.user._id,
-    })
+    const { startDate, endDate, status, page = 1, limit = 10 } = req.query;
+
+    // Build query
+    let query = { employee: req.user._id };
+
+    // Status filter
+    if (status) {
+      query.status = status;
+    }
+
+    // Date range filter
+    if (startDate || endDate) {
+      query.createdAt = {};
+      if (startDate) {
+        query.createdAt.$gte = new Date(startDate);
+      }
+      if (endDate) {
+        const endDateTime = new Date(endDate);
+        endDateTime.setHours(23, 59, 59, 999);
+        query.createdAt.$lte = endDateTime;
+      }
+    }
+
+    // Calculate pagination
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const total = await Overtime.countDocuments(query);
+
+    const overtime = await Overtime.find(query)
       .populate("employee", "name email role")
       .populate("attendance")
       .populate("approvedBy", "name email role")
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
 
     return res.status(200).json({
       success: true,
       count: overtime.length,
+      total,
+      page: parseInt(page),
+      pages: Math.ceil(total / parseInt(limit)),
       overtime,
     });
   } catch (error) {
@@ -150,6 +180,8 @@ exports.getPendingOvertime = async (req, res) => {
 
 exports.getAllOvertime = async (req, res) => {
   try {
+    const { startDate, endDate, userId, status, page = 1, limit = 20 } = req.query;
+
     let query = {};
 
     // If manager, only show their team's overtime
@@ -161,17 +193,54 @@ exports.getAllOvertime = async (req, res) => {
 
       const teamMemberIds = teamMembers.map(member => member._id);
       query.employee = { $in: teamMemberIds };
+      
+      // User filter (only team members)
+      if (userId && teamMemberIds.map(id => id.toString()).includes(userId)) {
+        query.employee = userId;
+      }
+    } else {
+      // Admin can filter by any user
+      if (userId) {
+        query.employee = userId;
+      }
     }
+
+    // Status filter
+    if (status) {
+      query.status = status;
+    }
+
+    // Date range filter
+    if (startDate || endDate) {
+      query.createdAt = {};
+      if (startDate) {
+        query.createdAt.$gte = new Date(startDate);
+      }
+      if (endDate) {
+        const endDateTime = new Date(endDate);
+        endDateTime.setHours(23, 59, 59, 999);
+        query.createdAt.$lte = endDateTime;
+      }
+    }
+
+    // Calculate pagination
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const total = await Overtime.countDocuments(query);
 
     const overtime = await Overtime.find(query)
       .populate("employee", "name email role")
       .populate("attendance")
       .populate("approvedBy", "name email role")
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
 
     return res.status(200).json({
       success: true,
       count: overtime.length,
+      total,
+      page: parseInt(page),
+      pages: Math.ceil(total / parseInt(limit)),
       overtime,
     });
   } catch (error) {

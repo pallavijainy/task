@@ -13,9 +13,9 @@ const App = () => {
   // Get default route based on role
   const getDefaultRoute = () => {
     if (!isAuthenticated) return '/login';
-    if (user?.role === 'admin') return '/admin/dashboard';
-    if (user?.role === 'manager') return '/manager/dashboard';
-    return '/employee/dashboard';
+    if (user?.role === 'admin') return '/admin';
+    if (user?.role === 'manager') return '/manager';
+    return '/employee';
   };
 
   return (
@@ -46,8 +46,7 @@ const App = () => {
             />
           }
         >
-          <Route path="/employee" element={<Navigate to="/employee/dashboard" replace />} />
-          <Route path="/employee/*" element={<EmployeeDashboard />} />
+          <Route path="/employee" element={<EmployeeDashboard />} />
         </Route>
 
         {/* Protected Manager Routes */}
@@ -61,8 +60,7 @@ const App = () => {
             />
           }
         >
-          <Route path="/manager" element={<Navigate to="/manager/dashboard" replace />} />
-          <Route path="/manager/*" element={<ManagerDashboard />} />
+          <Route path="/manager" element={<ManagerDashboard />} />
         </Route>
 
         {/* Protected Admin Routes */}
@@ -76,8 +74,7 @@ const App = () => {
             />
           }
         >
-          <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
-          <Route path="/admin/*" element={<AdminDashboard />} />
+          <Route path="/admin" element={<AdminDashboard />} />
         </Route>
 
         {/* Catch all */}

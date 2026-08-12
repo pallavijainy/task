@@ -32,14 +32,14 @@ const Modal = ({ isOpen, onClose, children, title, size = 'md' }) => {
         />
 
         {/* Modal */}
-        <div className={`relative bg-white rounded-xl shadow-soft-lg w-full ${sizes[size]} max-h-[90vh] overflow-hidden`}>
+        <div className={`relative bg-white dark:bg-slate-800 rounded-xl shadow-soft-lg w-full ${sizes[size]} max-h-[90vh] overflow-hidden`}>
           {/* Header */}
           {title && (
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
-              <h2 className="text-xl font-semibold text-slate-900">{title}</h2>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-700">
+              <h2 className="text-xl font-semibold text-slate-900 dark:text-white">{title}</h2>
               <button
                 onClick={onClose}
-                className="text-slate-400 hover:text-slate-600 transition-colors"
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>

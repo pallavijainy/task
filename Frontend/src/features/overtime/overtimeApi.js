@@ -1,10 +1,11 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
+import { API_URL } from "../../config/api";
 
 export const overtimeApi = createApi({
   reducerPath: "overtimeApi",
 
   baseQuery: fetchBaseQuery({
-    baseUrl: "https://task-2-7vlb.onrender.com/api",
+    baseUrl: API_URL,
 
     prepareHeaders: (headers) => {
       const token = localStorage.getItem("token");
@@ -33,10 +34,20 @@ export const overtimeApi = createApi({
     }),
 
     getMyOvertime: builder.query({
-      query: () => ({
-        url: "/overtime/my",
-        method: "GET",
-      }),
+      query: ({ page = 1, limit = 10, startDate, endDate, status } = {}) => {
+        const params = new URLSearchParams({
+          page: page.toString(),
+          limit: limit.toString(),
+        });
+        if (startDate) params.append('startDate', startDate);
+        if (endDate) params.append('endDate', endDate);
+        if (status) params.append('status', status);
+        
+        return {
+          url: `/overtime/my?${params.toString()}`,
+          method: "GET",
+        };
+      },
 
       providesTags: ["Overtime"],
     }),
@@ -51,10 +62,21 @@ export const overtimeApi = createApi({
     }),
 
     getAllOvertime: builder.query({
-      query: () => ({
-        url: "/overtime/all",
-        method: "GET",
-      }),
+      query: ({ page = 1, limit = 20, startDate, endDate, userId, status } = {}) => {
+        const params = new URLSearchParams({
+          page: page.toString(),
+          limit: limit.toString(),
+        });
+        if (startDate) params.append('startDate', startDate);
+        if (endDate) params.append('endDate', endDate);
+        if (userId) params.append('userId', userId);
+        if (status) params.append('status', status);
+        
+        return {
+          url: `/overtime/all?${params.toString()}`,
+          method: "GET",
+        };
+      },
 
       providesTags: ["Overtime"],
     }),

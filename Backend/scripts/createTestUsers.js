@@ -8,7 +8,6 @@ const userSchema = new mongoose.Schema({
   email: String,
   password: String,
   role: String,
-  managerId: mongoose.Schema.Types.ObjectId
 }, { timestamps: true });
 
 const User = mongoose.model('User', userSchema);
@@ -16,7 +15,7 @@ const User = mongoose.model('User', userSchema);
 async function createTestUsers() {
   try {
     // Connect to MongoDB
-    const mongoUri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/attendance-app';
+    const mongoUri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/attendance';
     await mongoose.connect(mongoUri);
     console.log('Connected to MongoDB');
 
@@ -37,7 +36,6 @@ async function createTestUsers() {
       email: 'admin@test.com',
       password: hashedPassword,
       role: 'admin',
-      managerId: null
     });
     console.log('✓ Admin created:', admin.email);
 
@@ -47,7 +45,6 @@ async function createTestUsers() {
       email: 'manager@test.com',
       password: hashedPassword,
       role: 'manager',
-      managerId: null
     });
     console.log('✓ Manager created:', manager.email);
 
@@ -57,7 +54,6 @@ async function createTestUsers() {
       email: 'employee@test.com',
       password: hashedPassword,
       role: 'employee',
-      managerId: manager._id
     });
     console.log('✓ Employee created:', employee.email);
 

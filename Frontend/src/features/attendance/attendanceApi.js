@@ -1,10 +1,11 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
+import { API_URL } from "../../config/api";
 
 export const attendanceApi = createApi({
   reducerPath: "attendanceApi",
 
   baseQuery: fetchBaseQuery({
-    baseUrl: "https://task-2-7vlb.onrender.com/api",
+    baseUrl: API_URL,
 
     prepareHeaders: (headers) => {
       const token = localStorage.getItem("token");
@@ -42,10 +43,19 @@ export const attendanceApi = createApi({
     }),
 
     getMyAttendance: builder.query({
-      query: () => ({
-        url: "/attendance/my",
-        method: "GET",
-      }),
+      query: ({ page = 1, limit = 10, startDate, endDate } = {}) => {
+        const params = new URLSearchParams({
+          page: page.toString(),
+          limit: limit.toString(),
+        });
+        if (startDate) params.append('startDate', startDate);
+        if (endDate) params.append('endDate', endDate);
+        
+        return {
+          url: `/attendance/my?${params.toString()}`,
+          method: "GET",
+        };
+      },
 
       providesTags: ["Attendance"],
     }),
@@ -60,19 +70,39 @@ export const attendanceApi = createApi({
     }),
 
     getTeamAttendance: builder.query({
-      query: () => ({
-        url: "/attendance/team",
-        method: "GET",
-      }),
+      query: ({ page = 1, limit = 10, startDate, endDate, userId } = {}) => {
+        const params = new URLSearchParams({
+          page: page.toString(),
+          limit: limit.toString(),
+        });
+        if (startDate) params.append('startDate', startDate);
+        if (endDate) params.append('endDate', endDate);
+        if (userId) params.append('userId', userId);
+        
+        return {
+          url: `/attendance/team?${params.toString()}`,
+          method: "GET",
+        };
+      },
 
       providesTags: ["Attendance"],
     }),
 
     getAllAttendance: builder.query({
-      query: () => ({
-        url: "/attendance/all",
-        method: "GET",
-      }),
+      query: ({ page = 1, limit = 50, startDate, endDate, userId } = {}) => {
+        const params = new URLSearchParams({
+          page: page.toString(),
+          limit: limit.toString(),
+        });
+        if (startDate) params.append('startDate', startDate);
+        if (endDate) params.append('endDate', endDate);
+        if (userId) params.append('userId', userId);
+        
+        return {
+          url: `/attendance/all?${params.toString()}`,
+          method: "GET",
+        };
+      },
 
       providesTags: ["Attendance"],
     }),

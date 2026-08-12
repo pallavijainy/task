@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
-import { useLocation, useNavigate } from "react-router-dom";
 import {
   useGetAllAttendanceQuery,
   useValidateAttendanceMutation,
@@ -19,6 +18,8 @@ import Modal from "../../components/ui/Modal";
 import Badge from "../../components/ui/Badge";
 import EmptyState from "../../components/ui/EmptyState";
 import Avatar from "../../components/ui/Avatar";
+import FilterPanel from "../../components/ui/FilterPanel";
+import Pagination from "../../components/ui/Pagination";
 import { 
   Users, 
   CheckCircle, 
@@ -35,27 +36,37 @@ import { getStatusBadge, formatTime, formatDate, formatWorkingHours, getGreeting
 
 const AdminDashboard = () => {
   const { user } = useSelector((state) => state.auth);
-  const location = useLocation();
-  const navigate = useNavigate();
-  
-  // Determine active tab from URL
-  const getActiveTabFromPath = () => {
-    const path = location.pathname;
-    if (path.includes('/users')) return 'users';
-    if (path.includes('/attendance')) return 'attendance';
-    if (path.includes('/overtime')) return 'overtime';
-    if (path.includes('/validation')) return 'validation';
-    return 'dashboard';
-  };
+  const [activeTab, setActiveTab] = useState("attendance");
 
-  const [activeTab, setActiveTab] = useState(getActiveTabFromPath());
+  // Filter and Pagination State for Attendance
+  const [attendanceFilters, setAttendanceFilters] = useState({
+    startDate: '',
+    endDate: '',
+    userId: '',
+  });
+  const [attendancePage, setAttendancePage] = useState(1);
+  const attendanceLimit = 50;
 
-  useEffect(() => {
-    setActiveTab(getActiveTabFromPath());
-  }, [location.pathname]);
+  // Filter and Pagination State for Overtime
+  const [overtimeFilters, setOvertimeFilters] = useState({
+    startDate: '',
+    endDate: '',
+    userId: '',
+    status: '',
+  });
+  const [overtimePage, setOvertimePage] = useState(1);
+  const overtimeLimit = 20;
 
-  const { data: allAttendanceData, isLoading: loadingAttendance } = useGetAllAttendanceQuery();
-  const { data: allOvertimeData, isLoading: loadingOvertime } = useGetAllOvertimeQuery();
+  const { data: allAttendanceData, isLoading: loadingAttendance } = useGetAllAttendanceQuery({
+    ...attendanceFilters,
+    page: attendancePage,
+    limit: attendanceLimit,
+  });
+  const { data: allOvertimeData, isLoading: loadingOvertime } = useGetAllOvertimeQuery({
+    ...overtimeFilters,
+    page: overtimePage,
+    limit: overtimeLimit,
+  });
   const { data: allUsersData, isLoading: loadingUsers } = useGetAllUsersQuery();
 
   const [validateAttendance] = useValidateAttendanceMutation();
@@ -70,6 +81,24 @@ const AdminDashboard = () => {
 
   const [selectedOvertime, setSelectedOvertime] = useState(null);
   const [overtimeRemarks, setOvertimeRemarks] = useState("");
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setAttendancePage(1);
+  }, [attendanceFilters]);
+
+  useEffect(() => {
+    setOvertimePage(1);
+  }, [overtimeFilters]);
+
+  const overtimeStatusOptions = [
+    { value: 'pending', label: 'Pending' },
+    { value: 'approved', label: 'Approved' },
+    { value: 'rejected', label: 'Rejected' },
+  ];
+
+  // Combine employees and managers for user filter
+  const allUsers = [...(allUsersData?.employees || []), ...(allUsersData?.managers || [])];
 
   const handleValidateAttendance = (attendance) => {
     setSelectedAttendance(attendance);
@@ -138,10 +167,9 @@ const AdminDashboard = () => {
   ).length || 0;
 
   const tabs = [
-    { id: "dashboard", label: "Dashboard", icon: Users, path: "/admin/dashboard" },
-    { id: "attendance", label: "Attendance", icon: Calendar, path: "/admin/attendance" },
-    { id: "overtime", label: "Overtime", icon: Clock, path: "/admin/overtime" },
-    { id: "users", label: "Users", icon: Users, path: "/admin/users" },
+    { id: "attendance", label: "Attendance", icon: Calendar },
+    { id: "overtime", label: "Overtime", icon: Clock },
+    { id: "users", label: "Users", icon: Users },
   ];
 
   return (
@@ -182,20 +210,20 @@ const AdminDashboard = () => {
 
       {/* Tabs */}
       <div className="mb-6">
-        <div className="border-b border-slate-200">
+        <div className="border-b border-slate-200 dark:border-slate-700">
           <nav className="flex gap-8">
             {tabs.map((tab) => {
               const Icon = tab.icon;
               return (
                 <button
                   key={tab.id}
-                  onClick={() => navigate(tab.path)}
+                  onClick={() => setActiveTab(tab.id)}
                   className={`
                     flex items-center gap-2 pb-4 border-b-2 transition-all
                     ${
                       activeTab === tab.id
-                        ? "border-primary-600 text-primary-600"
-                        : "border-transparent text-slate-600 hover:text-slate-900"
+                        ? "border-primary-600 text-primary-600 dark:text-primary-400 dark:border-primary-400"
+                        : "border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
                     }
                   `}
                 >
@@ -209,33 +237,6 @@ const AdminDashboard = () => {
       </div>
 
       {/* Tab Content */}
-      {activeTab === "dashboard" && (
-        <div className="grid grid-cols-1 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>System Overview</CardTitle>
-            </CardHeader>
-            <div className="p-6">
-              <p className="text-slate-600 mb-4">Welcome to the admin dashboard. Use the tabs above to navigate between different sections.</p>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="bg-slate-50 rounded-lg p-4">
-                  <h4 className="font-semibold text-slate-900 mb-2">Attendance Management</h4>
-                  <p className="text-sm text-slate-600">View and validate all employee attendance records</p>
-                </div>
-                <div className="bg-slate-50 rounded-lg p-4">
-                  <h4 className="font-semibold text-slate-900 mb-2">Overtime Requests</h4>
-                  <p className="text-sm text-slate-600">Review and approve/reject overtime requests</p>
-                </div>
-                <div className="bg-slate-50 rounded-lg p-4">
-                  <h4 className="font-semibold text-slate-900 mb-2">User Management</h4>
-                  <p className="text-sm text-slate-600">Manage all users in the system</p>
-                </div>
-              </div>
-            </div>
-          </Card>
-        </div>
-      )}
-
       {activeTab === "attendance" && (
         <Card>
           <CardHeader>
@@ -257,48 +258,48 @@ const AdminDashboard = () => {
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-slate-200">
-                    <th className="text-left py-3 px-4 text-xs font-medium text-slate-600 uppercase tracking-wider">
+                  <tr className="border-b border-slate-200 dark:border-slate-700">
+                    <th className="text-left py-3 px-4 text-xs font-medium text-slate-600 dark:text-slate-400 uppercase tracking-wider">
                       Employee
                     </th>
-                    <th className="text-left py-3 px-4 text-xs font-medium text-slate-600 uppercase tracking-wider">
+                    <th className="text-left py-3 px-4 text-xs font-medium text-slate-600 dark:text-slate-400 uppercase tracking-wider">
                       Date
                     </th>
-                    <th className="text-left py-3 px-4 text-xs font-medium text-slate-600 uppercase tracking-wider">
+                    <th className="text-left py-3 px-4 text-xs font-medium text-slate-600 dark:text-slate-400 uppercase tracking-wider">
                       Punch In
                     </th>
-                    <th className="text-left py-3 px-4 text-xs font-medium text-slate-600 uppercase tracking-wider">
+                    <th className="text-left py-3 px-4 text-xs font-medium text-slate-600 dark:text-slate-400 uppercase tracking-wider">
                       Punch Out
                     </th>
-                    <th className="text-left py-3 px-4 text-xs font-medium text-slate-600 uppercase tracking-wider">
+                    <th className="text-left py-3 px-4 text-xs font-medium text-slate-600 dark:text-slate-400 uppercase tracking-wider">
                       Hours
                     </th>
-                    <th className="text-left py-3 px-4 text-xs font-medium text-slate-600 uppercase tracking-wider">
+                    <th className="text-left py-3 px-4 text-xs font-medium text-slate-600 dark:text-slate-400 uppercase tracking-wider">
                       Status
                     </th>
-                    <th className="text-left py-3 px-4 text-xs font-medium text-slate-600 uppercase tracking-wider">
+                    <th className="text-left py-3 px-4 text-xs font-medium text-slate-600 dark:text-slate-400 uppercase tracking-wider">
                       Validation
                     </th>
-                    <th className="text-right py-3 px-4 text-xs font-medium text-slate-600 uppercase tracking-wider">
+                    <th className="text-right py-3 px-4 text-xs font-medium text-slate-600 dark:text-slate-400 uppercase tracking-wider">
                       Actions
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-200">
+                <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
                   {allAttendanceData.attendance.slice(0, 50).map((record) => (
-                    <tr key={record._id} className="hover:bg-slate-50">
+                    <tr key={record._id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-3">
                           <Avatar name={record.employee?.name} size="sm" />
-                          <span className="text-sm font-medium text-slate-900">
+                          <span className="text-sm font-medium text-slate-900 dark:text-slate-100">
                             {record.employee?.name}
                           </span>
                         </div>
                       </td>
-                      <td className="py-3 px-4 text-sm text-slate-900">{formatDate(record.punchInTime)}</td>
-                      <td className="py-3 px-4 text-sm text-slate-600">{formatTime(record.punchInTime)}</td>
-                      <td className="py-3 px-4 text-sm text-slate-600">{formatTime(record.punchOutTime)}</td>
-                      <td className="py-3 px-4 text-sm text-slate-900 font-medium">
+                      <td className="py-3 px-4 text-sm text-slate-900 dark:text-slate-100">{formatDate(record.punchInTime)}</td>
+                      <td className="py-3 px-4 text-sm text-slate-600 dark:text-slate-400">{formatTime(record.punchInTime)}</td>
+                      <td className="py-3 px-4 text-sm text-slate-600 dark:text-slate-400">{formatTime(record.punchOutTime)}</td>
+                      <td className="py-3 px-4 text-sm text-slate-900 dark:text-slate-100 font-medium">
                         {formatWorkingHours(record.totalWorkingHours)}
                       </td>
                       <td className="py-3 px-4">{getStatusBadge(record.workingStatus)}</td>
@@ -343,41 +344,41 @@ const AdminDashboard = () => {
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-slate-200">
-                    <th className="text-left py-3 px-4 text-xs font-medium text-slate-600 uppercase tracking-wider">
+                  <tr className="border-b border-slate-200 dark:border-slate-700">
+                    <th className="text-left py-3 px-4 text-xs font-medium text-slate-600 dark:text-slate-400 uppercase tracking-wider">
                       Employee
                     </th>
-                    <th className="text-left py-3 px-4 text-xs font-medium text-slate-600 uppercase tracking-wider">
+                    <th className="text-left py-3 px-4 text-xs font-medium text-slate-600 dark:text-slate-400 uppercase tracking-wider">
                       Date
                     </th>
-                    <th className="text-left py-3 px-4 text-xs font-medium text-slate-600 uppercase tracking-wider">
+                    <th className="text-left py-3 px-4 text-xs font-medium text-slate-600 dark:text-slate-400 uppercase tracking-wider">
                       Hours
                     </th>
-                    <th className="text-left py-3 px-4 text-xs font-medium text-slate-600 uppercase tracking-wider">
+                    <th className="text-left py-3 px-4 text-xs font-medium text-slate-600 dark:text-slate-400 uppercase tracking-wider">
                       Reason
                     </th>
-                    <th className="text-left py-3 px-4 text-xs font-medium text-slate-600 uppercase tracking-wider">
+                    <th className="text-left py-3 px-4 text-xs font-medium text-slate-600 dark:text-slate-400 uppercase tracking-wider">
                       Status
                     </th>
-                    <th className="text-right py-3 px-4 text-xs font-medium text-slate-600 uppercase tracking-wider">
+                    <th className="text-right py-3 px-4 text-xs font-medium text-slate-600 dark:text-slate-400 uppercase tracking-wider">
                       Actions
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-200">
+                <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
                   {allOvertimeData.overtime.map((ot) => (
-                    <tr key={ot._id} className="hover:bg-slate-50">
+                    <tr key={ot._id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-3">
                           <Avatar name={ot.employee?.name} size="sm" />
-                          <span className="text-sm font-medium text-slate-900">
+                          <span className="text-sm font-medium text-slate-900 dark:text-slate-100">
                             {ot.employee?.name}
                           </span>
                         </div>
                       </td>
-                      <td className="py-3 px-4 text-sm text-slate-900">{formatDate(ot.createdAt)}</td>
-                      <td className="py-3 px-4 text-sm text-slate-900 font-medium">{ot.hours}h</td>
-                      <td className="py-3 px-4 text-sm text-slate-600 max-w-xs truncate">{ot.reason}</td>
+                      <td className="py-3 px-4 text-sm text-slate-900 dark:text-slate-100">{formatDate(ot.createdAt)}</td>
+                      <td className="py-3 px-4 text-sm text-slate-900 dark:text-slate-100 font-medium">{ot.hours}h</td>
+                      <td className="py-3 px-4 text-sm text-slate-600 dark:text-slate-400 max-w-xs truncate">{ot.reason}</td>
                       <td className="py-3 px-4">{getStatusBadge(ot.status)}</td>
                       <td className="py-3 px-4 text-right">
                         {ot.status === "pending" && (
@@ -401,78 +402,133 @@ const AdminDashboard = () => {
       )}
 
       {activeTab === "users" && (
-        <Card>
-          <CardHeader>
-            <CardTitle>All Users</CardTitle>
-          </CardHeader>
+        <>
+          {/* Employees Table */}
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle>Employees ({allUsersData?.employeeCount || 0})</CardTitle>
+            </CardHeader>
 
-          {loadingUsers ? (
-            <div className="text-center py-12">
-              <div className="animate-spin w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full mx-auto"></div>
-              <p className="text-sm text-slate-600 mt-4">Loading users...</p>
-            </div>
-          ) : !allUsersData?.users || allUsersData.users.length === 0 ? (
-            <EmptyState
-              icon={Users}
-              title="No users found"
-              description="Users will appear here"
-            />
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-slate-200">
-                    <th className="text-left py-3 px-4 text-xs font-medium text-slate-600 uppercase tracking-wider">
-                      User
-                    </th>
-                    <th className="text-left py-3 px-4 text-xs font-medium text-slate-600 uppercase tracking-wider">
-                      Email
-                    </th>
-                    <th className="text-left py-3 px-4 text-xs font-medium text-slate-600 uppercase tracking-wider">
-                      Role
-                    </th>
-                    <th className="text-left py-3 px-4 text-xs font-medium text-slate-600 uppercase tracking-wider">
-                      Manager
-                    </th>
-                    <th className="text-left py-3 px-4 text-xs font-medium text-slate-600 uppercase tracking-wider">
-                      Created
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200">
-                  {allUsersData.users.map((usr) => (
-                    <tr key={usr._id} className="hover:bg-slate-50">
-                      <td className="py-3 px-4">
-                        <div className="flex items-center gap-3">
-                          <Avatar name={usr.name} size="sm" />
-                          <span className="text-sm font-medium text-slate-900">{usr.name}</span>
-                        </div>
-                      </td>
-                      <td className="py-3 px-4 text-sm text-slate-600">{usr.email}</td>
-                      <td className="py-3 px-4">
-                        <Badge
-                          variant={
-                            usr.role === "admin"
-                              ? "danger"
-                              : usr.role === "manager"
-                              ? "warning"
-                              : "info"
-                          }
-                        >
-                          {usr.role}
-                        </Badge>
-                      </td>
-                      <td className="py-3 px-4 text-sm text-slate-600">
-                        {usr.managerId?.name || "—"}
-                      </td>
-                      <td className="py-3 px-4 text-sm text-slate-600">{formatDate(usr.createdAt)}</td>
+            {loadingUsers ? (
+              <div className="text-center py-12">
+                <div className="animate-spin w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full mx-auto"></div>
+                <p className="text-sm text-slate-600 dark:text-slate-400 mt-4">Loading employees...</p>
+              </div>
+            ) : !allUsersData?.employees || allUsersData.employees.length === 0 ? (
+              <EmptyState
+                icon={Users}
+                title="No employees found"
+                description="Employee accounts will appear here"
+              />
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-slate-200 dark:border-slate-700">
+                      <th className="text-left py-3 px-4 text-xs font-medium text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+                        Employee
+                      </th>
+                      <th className="text-left py-3 px-4 text-xs font-medium text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+                        Email
+                      </th>
+                      <th className="text-left py-3 px-4 text-xs font-medium text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+                        Role
+                      </th>
+                    
+                      <th className="text-left py-3 px-4 text-xs font-medium text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+                        Joined
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </Card>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
+                    {allUsersData.employees.map((emp) => (
+                      <tr key={emp._id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-3">
+                            <Avatar name={emp.name} size="sm" />
+                            <span className="text-sm font-medium text-slate-900 dark:text-slate-100">{emp.name}</span>
+                          </div>
+                        </td>
+                        <td className="py-3 px-4 text-sm text-slate-600 dark:text-slate-400">{emp.email}</td>
+                        <td className="py-3 px-4">
+                          <Badge variant="info">Employee</Badge>
+                        </td>
+                       
+                        <td className="py-3 px-4 text-sm text-slate-600 dark:text-slate-400">{formatDate(emp.createdAt)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Card>
+
+          {/* Managers Table */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Managers ({allUsersData?.managerCount || 0})</CardTitle>
+            </CardHeader>
+
+            {loadingUsers ? (
+              <div className="text-center py-12">
+                <div className="animate-spin w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full mx-auto"></div>
+                <p className="text-sm text-slate-600 dark:text-slate-400 mt-4">Loading managers...</p>
+              </div>
+            ) : !allUsersData?.managers || allUsersData.managers.length === 0 ? (
+              <EmptyState
+                icon={Users}
+                title="No managers found"
+                description="Manager accounts will appear here"
+              />
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-slate-200 dark:border-slate-700">
+                      <th className="text-left py-3 px-4 text-xs font-medium text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+                        Manager
+                      </th>
+                      <th className="text-left py-3 px-4 text-xs font-medium text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+                        Email
+                      </th>
+                      <th className="text-left py-3 px-4 text-xs font-medium text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+                        Role
+                      </th>
+                    
+                      <th className="text-left py-3 px-4 text-xs font-medium text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+                        Joined
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
+                    {allUsersData.managers.map((mgr) => {
+                      const teamSize = allUsersData.employees.filter(
+                        emp => emp.managerId?._id === mgr._id
+                      ).length;
+                      
+                      return (
+                        <tr key={mgr._id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                          <td className="py-3 px-4">
+                            <div className="flex items-center gap-3">
+                              <Avatar name={mgr.name} size="sm" />
+                              <span className="text-sm font-medium text-slate-900 dark:text-slate-100">{mgr.name}</span>
+                            </div>
+                          </td>
+                          <td className="py-3 px-4 text-sm text-slate-600 dark:text-slate-400">{mgr.email}</td>
+                          <td className="py-3 px-4">
+                            <Badge variant="warning">Manager</Badge>
+                          </td>
+                         
+                          <td className="py-3 px-4 text-sm text-slate-600 dark:text-slate-400">{formatDate(mgr.createdAt)}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Card>
+        </>
       )}
 
       {/* Validation Modal (same as Manager) */}

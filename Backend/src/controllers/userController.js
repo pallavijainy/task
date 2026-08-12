@@ -2,15 +2,25 @@ const User = require("../models/User");
 
 exports.getAllUsers = async (req, res) => {
   try {
-    const users = await User.find()
+    // Admin should see only Employees and Managers (NOT other Admins)
+    const users = await User.find({ 
+      role: { $in: ['employee', 'manager'] } 
+    })
       .select("-password")
-      .populate("managerId", "name email role")
-      .sort({ createdAt: -1 });
+      .sort({ role: 1, name: 1 }); // Sort by role first, then name
+
+    // Separate users by role for frontend display
+    const employees = users.filter(user => user.role === 'employee');
+    const managers = users.filter(user => user.role === 'manager');
 
     return res.status(200).json({
       success: true,
       count: users.length,
-      users,
+      users, // All non-admin users
+      employees, // Only employees
+      managers, // Only managers
+      employeeCount: employees.length,
+      managerCount: managers.length,
     });
   } catch (error) {
     console.error("Get All Users Error:", error);
@@ -24,17 +34,18 @@ exports.getAllUsers = async (req, res) => {
 
 exports.getTeamMembers = async (req, res) => {
   try {
+    // Manager should see only Employees (NOT Admins or other Managers)
     const teamMembers = await User.find({ 
-      managerId: req.user._id,
-      role: 'employee'
+      role: 'employee' // Only employees
     })
       .select("-password")
-      .sort({ name: 1 });
+      .sort({ name: 1 }); // Sort by name
 
     return res.status(200).json({
       success: true,
       count: teamMembers.length,
       users: teamMembers,
+      employees: teamMembers, // Alias for consistency
     });
   } catch (error) {
     console.error("Get Team Members Error:", error);
@@ -52,7 +63,6 @@ exports.getUserById = async (req, res) => {
 
     const user = await User.findById(id)
       .select("-password")
-      .populate("managerId", "name email role");
 
     if (!user) {
       return res.status(404).json({
@@ -78,7 +88,7 @@ exports.getUserById = async (req, res) => {
 exports.updateUser = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, email, role, managerId } = req.body;
+    const { name, email, role } = req.body;
 
     const user = await User.findById(id);
 
@@ -92,13 +102,11 @@ exports.updateUser = async (req, res) => {
     if (name) user.name = name;
     if (email) user.email = email;
     if (role) user.role = role;
-    if (managerId !== undefined) user.managerId = managerId || null;
 
     await user.save();
 
     const updatedUser = await User.findById(id)
       .select("-password")
-      .populate("managerId", "name email role");
 
     return res.status(200).json({
       success: true,

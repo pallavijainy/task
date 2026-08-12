@@ -121,18 +121,41 @@ exports.punchOut = async (req, res) => {
 
 exports.getMyAttendance = async (req, res) => {
   try {
-    const attendance = await Attendance.find({
-      employee: req.user._id,
-    })
+    const { startDate, endDate, page = 1, limit = 10 } = req.query;
+
+    // Build query
+    let query = { employee: req.user._id };
+
+    // Date range filter
+    if (startDate || endDate) {
+      query.punchInTime = {};
+      if (startDate) {
+        query.punchInTime.$gte = new Date(startDate);
+      }
+      if (endDate) {
+        const endDateTime = new Date(endDate);
+        endDateTime.setHours(23, 59, 59, 999);
+        query.punchInTime.$lte = endDateTime;
+      }
+    }
+
+    // Calculate pagination
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const total = await Attendance.countDocuments(query);
+
+    const attendance = await Attendance.find(query)
       .populate("employee", "name email role")
       .populate("validatedBy", "name email role")
-      .sort({
-        punchInTime: -1,
-      });
+      .sort({ punchInTime: -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
 
     return res.status(200).json({
       success: true,
       count: attendance.length,
+      total,
+      page: parseInt(page),
+      pages: Math.ceil(total / parseInt(limit)),
       attendance,
     });
   } catch (error) {
@@ -172,6 +195,8 @@ exports.getTodayAttendance = async (req, res) => {
 
 exports.getTeamAttendance = async (req, res) => {
   try {
+    const { startDate, endDate, userId, page = 1, limit = 10 } = req.query;
+
     // Find all employees managed by this manager
     const teamMembers = await User.find({ 
       managerId: req.user._id,
@@ -180,16 +205,44 @@ exports.getTeamAttendance = async (req, res) => {
 
     const teamMemberIds = teamMembers.map(member => member._id);
 
-    const attendance = await Attendance.find({
-      employee: { $in: teamMemberIds }
-    })
+    // Build query
+    let query = { employee: { $in: teamMemberIds } };
+
+    // User filter (specific employee)
+    if (userId && teamMemberIds.map(id => id.toString()).includes(userId)) {
+      query.employee = userId;
+    }
+
+    // Date range filter
+    if (startDate || endDate) {
+      query.punchInTime = {};
+      if (startDate) {
+        query.punchInTime.$gte = new Date(startDate);
+      }
+      if (endDate) {
+        const endDateTime = new Date(endDate);
+        endDateTime.setHours(23, 59, 59, 999);
+        query.punchInTime.$lte = endDateTime;
+      }
+    }
+
+    // Calculate pagination
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const total = await Attendance.countDocuments(query);
+
+    const attendance = await Attendance.find(query)
       .populate("employee", "name email role")
       .populate("validatedBy", "name email role")
-      .sort({ punchInTime: -1 });
+      .sort({ punchInTime: -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
 
     return res.status(200).json({
       success: true,
       count: attendance.length,
+      total,
+      page: parseInt(page),
+      pages: Math.ceil(total / parseInt(limit)),
       attendance,
     });
   } catch (error) {
@@ -204,14 +257,46 @@ exports.getTeamAttendance = async (req, res) => {
 
 exports.getAllAttendance = async (req, res) => {
   try {
-    const attendance = await Attendance.find()
+    const { startDate, endDate, userId, page = 1, limit = 50 } = req.query;
+
+    // Build query
+    let query = {};
+
+    // User filter
+    if (userId) {
+      query.employee = userId;
+    }
+
+    // Date range filter
+    if (startDate || endDate) {
+      query.punchInTime = {};
+      if (startDate) {
+        query.punchInTime.$gte = new Date(startDate);
+      }
+      if (endDate) {
+        const endDateTime = new Date(endDate);
+        endDateTime.setHours(23, 59, 59, 999);
+        query.punchInTime.$lte = endDateTime;
+      }
+    }
+
+    // Calculate pagination
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const total = await Attendance.countDocuments(query);
+
+    const attendance = await Attendance.find(query)
       .populate("employee", "name email role")
       .populate("validatedBy", "name email role")
-      .sort({ punchInTime: -1 });
+      .sort({ punchInTime: -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
 
     return res.status(200).json({
       success: true,
       count: attendance.length,
+      total,
+      page: parseInt(page),
+      pages: Math.ceil(total / parseInt(limit)),
       attendance,
     });
   } catch (error) {
