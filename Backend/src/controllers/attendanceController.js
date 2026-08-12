@@ -126,17 +126,15 @@ exports.getMyAttendance = async (req, res) => {
     // Build query
     let query = { employee: req.user._id };
 
-    // Date range filter
-    if (startDate || endDate) {
-      query.punchInTime = {};
-      if (startDate) {
-        query.punchInTime.$gte = new Date(startDate);
-      }
-      if (endDate) {
-        const endDateTime = new Date(endDate);
-        endDateTime.setHours(23, 59, 59, 999);
-        query.punchInTime.$lte = endDateTime;
-      }
+    if (startDate && endDate) {
+      query.date = {
+        $gte: startDate,
+        $lte: endDate
+      };
+    } else if (startDate) {
+      query.date = { $gte: startDate };
+    } else if (endDate) {
+      query.date = { $lte: endDate };
     }
 
     // Calculate pagination
@@ -146,7 +144,7 @@ exports.getMyAttendance = async (req, res) => {
     const attendance = await Attendance.find(query)
       .populate("employee", "name email role")
       .populate("validatedBy", "name email role")
-      .sort({ punchInTime: -1 })
+      .sort({ date: -1, punchInTime: -1 })
       .skip(skip)
       .limit(parseInt(limit));
 
@@ -213,17 +211,16 @@ exports.getTeamAttendance = async (req, res) => {
       query.employee = userId;
     }
 
-    // Date range filter
-    if (startDate || endDate) {
-      query.punchInTime = {};
-      if (startDate) {
-        query.punchInTime.$gte = new Date(startDate);
-      }
-      if (endDate) {
-        const endDateTime = new Date(endDate);
-        endDateTime.setHours(23, 59, 59, 999);
-        query.punchInTime.$lte = endDateTime;
-      }
+    // Date range filter - Use the date field instead of punchInTime for accurate filtering
+    if (startDate && endDate) {
+      query.date = {
+        $gte: startDate,
+        $lte: endDate
+      };
+    } else if (startDate) {
+      query.date = { $gte: startDate };
+    } else if (endDate) {
+      query.date = { $lte: endDate };
     }
 
     // Calculate pagination
@@ -233,7 +230,7 @@ exports.getTeamAttendance = async (req, res) => {
     const attendance = await Attendance.find(query)
       .populate("employee", "name email role")
       .populate("validatedBy", "name email role")
-      .sort({ punchInTime: -1 })
+      .sort({ date: -1, punchInTime: -1 })
       .skip(skip)
       .limit(parseInt(limit));
 
@@ -267,17 +264,16 @@ exports.getAllAttendance = async (req, res) => {
       query.employee = userId;
     }
 
-    // Date range filter
-    if (startDate || endDate) {
-      query.punchInTime = {};
-      if (startDate) {
-        query.punchInTime.$gte = new Date(startDate);
-      }
-      if (endDate) {
-        const endDateTime = new Date(endDate);
-        endDateTime.setHours(23, 59, 59, 999);
-        query.punchInTime.$lte = endDateTime;
-      }
+    // Date range filter - Use the date field instead of punchInTime for accurate filtering
+    if (startDate && endDate) {
+      query.date = {
+        $gte: startDate,
+        $lte: endDate
+      };
+    } else if (startDate) {
+      query.date = { $gte: startDate };
+    } else if (endDate) {
+      query.date = { $lte: endDate };
     }
 
     // Calculate pagination
@@ -287,7 +283,7 @@ exports.getAllAttendance = async (req, res) => {
     const attendance = await Attendance.find(query)
       .populate("employee", "name email role")
       .populate("validatedBy", "name email role")
-      .sort({ punchInTime: -1 })
+      .sort({ date: -1, punchInTime: -1 })
       .skip(skip)
       .limit(parseInt(limit));
 
