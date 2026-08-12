@@ -4,7 +4,7 @@ export const authApi = createApi({
   reducerPath: "authApi",
 
   baseQuery: fetchBaseQuery({
-    baseUrl: "http://localhost:3000/api",
+    baseUrl: "https://task-2-7vlb.onrender.com/api",
 
     prepareHeaders: (headers) => {
       const token = localStorage.getItem("token");
